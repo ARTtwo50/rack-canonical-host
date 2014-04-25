@@ -19,13 +19,14 @@ module Rack
         self.env = env
         self.host = host
         self.ignore = Array(options[:ignore])
+        self.ignore_agent = Array(options[:ignore_agent])
         self.conditions = Array(options[:if])
         self.cache_control = options[:cache_control]
       end
 
       def canonical?
         return true unless enabled?
-        known? || ignored?
+        known? || ignored? || agent_ignored?
       end
 
       def response
@@ -37,6 +38,7 @@ module Rack
       attr_accessor :env
       attr_accessor :host
       attr_accessor :ignore
+      attr_accessor :ignore_agent
       attr_accessor :conditions
       attr_accessor :cache_control
 
@@ -65,6 +67,10 @@ module Rack
         ignore.include?(request_uri.host)
       end
 
+      def agent_ignored?
+        any_match?(ignore_agent, user_agent)
+      end
+
       def known?
         host.nil? || request_uri.host == host
       end
@@ -77,6 +83,10 @@ module Rack
 
       def request_uri
         @request_uri ||= Addressable::URI.parse(Rack::Request.new(env).url)
+      end
+
+      def user_agent
+        String(Rack::Request.new(@env).user_agent)
       end
     end
   end

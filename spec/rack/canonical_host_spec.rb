@@ -128,6 +128,34 @@ RSpec.describe Rack::CanonicalHost do
       end
     end
 
+    context 'with :ignore_agent option' do
+      let(:app) { build_app('example.com', :ignore_agent => /some_agent/)}
+
+      include_context 'matching and non-matching requests'
+
+      context 'with a non-matching host' do
+        let(:url) { 'http://subdomain.example.net/full/path' }
+
+        context 'with an ignored user_agent' do
+          let(:headers) { { 'HTTP_USER_AGENT' => 'some_agent/1.2.3' } }
+
+          it { should_not be_redirect }
+
+          it 'calls the inner app' do
+            expect(inner_app).to receive(:call).with(env)
+            call_app
+          end
+        end
+
+        context 'with a non-ignored user_agent' do
+          # Safari 7.0.3
+          let(:headers) { { 'HTTP_USER_AGENT' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/7046A194A' } }
+
+          it { should redirect_to('http://example.com/full/path') }
+        end
+      end
+    end
+
     context 'with :if option' do
       let(:app) { build_app('example.com', :if => 'www.example.net') }
 
