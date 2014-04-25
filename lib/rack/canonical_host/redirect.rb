@@ -19,11 +19,12 @@ module Rack
         @host = host
         @force_ssl = options[:force_ssl]
         @ignore = Array(options[:ignore])
+        @ignore_agent = Array(options[:ignore_agent])
         @if = Array(options[:if])
       end
 
       def canonical?
-        (known? && ssl?) || ignored? || !conditions_match?
+        (known? && ssl?) || ignored? || !conditions_match? || agent_ignored?
       end
 
       def response
@@ -45,15 +46,21 @@ module Rack
         @ignore && @ignore.include?(request_uri.host)
       end
 
+      def agent_ignored?
+        @ignore_agent && @ignore_agent.match(user_agent)
+      end
+
       def conditions_match?
         return true unless @if.size > 0
         @if.include?( request_uri.host ) || any_regexp_match?( @if, request_uri.host )
       end
+
       private :conditions_match?
 
       def any_regexp_match?( regexp_array, string )
         regexp_array.any?{ |r| string[r] }
       end
+
       private :any_regexp_match?
 
       def new_url
@@ -65,6 +72,10 @@ module Rack
 
       def request_uri
         Addressable::URI.parse(Rack::Request.new(@env).url)
+      end
+
+      def user_agent
+        Rack::Request.new(@env).user_agent
       end
     end
   end
